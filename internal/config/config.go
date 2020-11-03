@@ -169,10 +169,14 @@ func (c *Config) Set(key string, value interface{}) error {
 		return fmt.Errorf("\"%s\" is not a valid key; Please use one of: %s", key, validConfigKeys())
 	}
 
+	log.Warnf("c before: %+v", c)
+
 	err := c.set(key, value)
 	if err != nil {
 		return err
 	}
+
+	log.Warnf("c after: %+v", c)
 
 	output.Printf("%s set to %s\n", text.Bold.Sprint(key), text.FgCyan.Sprint(value))
 
@@ -258,8 +262,8 @@ func (c *Config) set(key string, value interface{}) error {
 	}
 
 	cfgViper.Set(globalScopeIdentifier+"."+key, value)
-	allScopes, err := unmarshalAllScopes(cfgViper)
 
+	allScopes, err := unmarshalAllScopes(cfgViper)
 	if err != nil {
 		return err
 	}
@@ -275,18 +279,19 @@ func (c *Config) set(key string, value interface{}) error {
 	}
 
 	err = config.validate()
-
 	if err != nil {
 		return err
 	}
 
 	path := fmt.Sprintf("%s/%s.%s", c.configDir, DefaultConfigName, DefaultConfigType)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
+		log.Infof("creating config file at %s: %+v", path, cfgViper.AllSettings())
 		createErr := c.createFile(path, cfgViper)
 		if createErr != nil {
 			return createErr
 		}
 	} else {
+		log.Debugf("writing config file at %s", path)
 		err = cfgViper.WriteConfig()
 		if err != nil {
 			log.Error(err)
